@@ -43,6 +43,7 @@
 	} from '$lib/types';
 	import {
 		buildMentionInsertion,
+		canCompactMessages,
 		containsCodeSpan,
 		containsFileMentionLink,
 		findCommandToken,
@@ -144,6 +145,7 @@
 	);
 
 	const pickers = useChatFormPickers({
+		canCompact: () => canCompactMessages(conversationsStore.activeMessages),
 		focusInput: refocusInput,
 		getCaretOffset: () => inputRef?.getCaretOffset(),
 		getCwd: () => cwd,
@@ -154,6 +156,7 @@
 		hasCwdTools: () => toolsStore.hasEnabledCwdTools,
 		hasPrompts: () =>
 			mcpStore.hasPromptsCapability(conversationsStore.preferences.getAllMcpServerOverrides()),
+		onCompact: () => chatStore.compactConversation(),
 		openModelSelector: () => chatFormActionsRef?.openModelSelector(),
 		setCaretOffset: (offset) => inputRef?.setCaretOffset(offset),
 		setValue: (v) => {
