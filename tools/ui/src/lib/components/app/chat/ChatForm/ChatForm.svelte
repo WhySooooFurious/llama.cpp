@@ -72,9 +72,11 @@
 		disabled?: boolean;
 		isLoading?: boolean;
 		placeholder?: string;
+		showContextGauge?: boolean;
 		showMcpPromptButton?: boolean;
 		showAddButton?: boolean;
 		showModelSelector?: boolean;
+		showWorkingDirectory?: boolean;
 
 		// Event Handlers
 		onAttachmentRemove?: (index: number) => void;
@@ -102,8 +104,10 @@
 		onValueChange,
 		placeholder = 'Type a message...',
 		showAddButton = true,
+		showContextGauge = true,
 		showMcpPromptButton = false,
 		showModelSelector = true,
+		showWorkingDirectory = true,
 		uploadedFiles = $bindable([]),
 		value = $bindable('')
 	}: Props = $props();
@@ -616,6 +620,7 @@
 				isReasoning={chatStore.isReasoning}
 				{isRecording}
 				{showAddButton}
+				{showContextGauge}
 				{showModelSelector}
 				{uploadedFiles}
 				onFileUpload={handleFileUpload}
@@ -628,9 +633,11 @@
 		</div>
 	</div>
 
-	<ContextGaugePopup />
+	{#if showContextGauge}
+		<ContextGaugePopup />
+	{/if}
 
-	{#if toolsStore.hasEnabledCwdTools}
+	{#if showWorkingDirectory && toolsStore.hasEnabledCwdTools}
 		<ChatFormCurrentWorkingDirectory
 			directory={cwd}
 			isOpen={pickers.isWorkingDirectoryPickerOpen}
