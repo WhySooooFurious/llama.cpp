@@ -79,7 +79,9 @@
 		>
 			<ActionIcon icon={Copy} tooltip="Copy" onclick={messageActions.copy} />
 
-			<ActionIcon icon={Edit} tooltip="Edit" onclick={editCtx.startEdit} />
+			{#if editCtx.canEdit}
+				<ActionIcon icon={Edit} tooltip="Edit" onclick={editCtx.startEdit} />
+			{/if}
 
 			{#if role === MessageRole.ASSISTANT && onRegenerate}
 				<ActionIcon icon={RefreshCw} tooltip="Regenerate" onclick={() => onRegenerate()} />
