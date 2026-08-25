@@ -1,0 +1,116 @@
+name: Build llama.cpp (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ui/assistant-edit-fields
+  pull_request:
+    branches:
+      - ui/assistant-edit-fields
+
+concurrency:
+  group: windows-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Windows x64
+    runs-on: windows-2025
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Ninja
+        run: choco install ninja --no-progress -y
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build `
+            -G "Ninja Multi-Config" `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_CXX_COMPILER=cl `
+            -DGGML_NATIVE=OFF `
+            -DLLAMA_BUILD_COMMON=ON `
+            -DLLAMA_BUILD_TOOLS=ON `
+            -DLLAMA_BUILD_EXAMPLES=ON `
+            -DLLAMA_BUILD_TESTS=ON `
+            -DLLAMA_BUILD_SERVER=ON `
+            -DLLAMA_BUILD_APP=ON `
+            -DLLAMA_BUILD_UI=ON `
+            -DLLAMA_USE_PREBUILT_UI=ON `
+            -DBUILD_SHARED_LIBS=OFF
+
+      - name: Build
+        shell: pwsh
+        run: |
+          cmake --build build --config Release --parallel
+
+      - name: Verify llama-server
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "build/bin/Release/llama-server.exe")) {
+            Write-Error "llama-server.exe was not produced"
+            exit 1
+          }
+
+          & "build/bin/Release/llama-server.exe" --help
+
+      - name: Run tests
+        shell: pwsh
+        working-directory: build
+        run: |
+          ctest -C Release -L main --output-on-failure --timeout 900
+
+      - name: Collect build artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifact/bin | Out-Null
+          New-Item -ItemType Directory -Force -Path artifact/lib | Out-Null
+          New-Item -ItemType Directory -Force -Path artifact/include | Out-Null
+
+          Copy-Item -Recurse -Force "build/bin/Release/*" "artifact/bin/"
+
+          if (Test-Path "build/lib/Release") {
+            Copy-Item -Recurse -Force "build/lib/Release/*" "artifact/lib/"
+          }
+
+          if (Test-Path "include") {
+            Copy-Item -Recurse -Force "include/*" "artifact/include/"
+          }
+
+          if (Test-Path "ggml/include") {
+            New-Item -ItemType Directory -Force -Path "artifact/ggml/include" | Out-Null
+            Copy-Item -Recurse -Force "ggml/include/*" "artifact/ggml/include/"
+          }
+
+          if (Test-Path "LICENSE") {
+            Copy-Item "LICENSE" "artifact/"
+          }
+
+          if (Test-Path "README.md") {
+            Copy-Item "README.md" "artifact/"
+          }
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "artifact/*" `
+            -DestinationPath "llama-cpp-windows-x64.zip" `
+            -Force
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: llama-cpp-windows-x64
+          path: llama-cpp-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
